@@ -20,16 +20,33 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Scaffold App
+      - name: Build Android App
         run: |
+          set -e
+
+          # 1. Directory Structure
           mkdir -p app/src/main/java/com/voltvault/app
           mkdir -p app/src/main/res/values
           mkdir -p app/src/main/assets
+          mkdir -p gradle/wrapper
 
-          # Copy your calculator HTML
+          # 2. Put index.html in assets
           cp index.html app/src/main/assets/index.html
 
-          # settings.gradle
+          # 3. Download official Gradle 8.5 wrapper binaries directly
+          curl -sLo gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradle/wrapper/gradle-wrapper.jar
+          curl -sLo gradlew https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradlew
+          chmod +x gradlew
+
+          cat << 'EOF' > gradle/wrapper/gradle-wrapper.properties
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          EOF
+
+          # 4. Settings
           cat << 'EOF' > settings.gradle
           pluginManagement {
               repositories {
@@ -49,14 +66,14 @@ jobs:
           include ':app'
           EOF
 
-          # Root build.gradle
+          # 5. Root build.gradle
           cat << 'EOF' > build.gradle
           plugins {
               id 'com.android.application' version '8.2.2' apply false
           }
           EOF
 
-          # App build.gradle
+          # 6. App build.gradle
           cat << 'EOF' > app/build.gradle
           plugins {
               id 'com.android.application'
@@ -90,7 +107,7 @@ jobs:
           }
           EOF
 
-          # AndroidManifest.xml
+          # 7. AndroidManifest.xml
           cat << 'EOF' > app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -112,7 +129,7 @@ jobs:
           </manifest>
           EOF
 
-          # MainActivity.java
+          # 8. MainActivity.java
           cat << 'EOF' > app/src/main/java/com/voltvault/app/MainActivity.java
           package com.voltvault.app;
 
@@ -135,11 +152,8 @@ jobs:
           }
           EOF
 
-          # Initialize standard Gradle wrapper
-          gradle wrapper --gradle-version 8.5
-
-      - name: Compile APK
-        run: ./gradlew assembleDebug --no-daemon
+          # 9. Compile APK using downloaded wrapper
+          ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
